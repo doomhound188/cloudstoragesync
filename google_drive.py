@@ -58,10 +58,12 @@ def create_folder_if_not_exists(service, name, parent_id=None):
     If yes, returns its ID.
     If no, creates it and returns the new ID.
     """
-    safe_name = name.replace("'", "\\'")
+    # Escape backslashes first, then single quotes to prevent query injection
+    safe_name = name.replace("\\", "\\\\").replace("'", "\\'")
     query = f"mimeType='application/vnd.google-apps.folder' and name='{safe_name}' and trashed=false"
     if parent_id:
-        query += f" and '{parent_id}' in parents"
+        safe_parent_id = parent_id.replace("\\", "\\\\").replace("'", "\\'")
+        query += f" and '{safe_parent_id}' in parents"
 
     results = service.files().list(q=query, spaces='drive', fields='files(id, name)').execute()
     items = results.get('files', [])
@@ -87,10 +89,12 @@ def file_exists(service, name, parent_id=None):
     """
     Checks if a file exists. Returns the ID if it does, None otherwise.
     """
-    safe_name = name.replace("'", "\\'")
+    # Escape backslashes first, then single quotes to prevent query injection
+    safe_name = name.replace("\\", "\\\\").replace("'", "\\'")
     query = f"name='{safe_name}' and trashed=false and mimeType!='application/vnd.google-apps.folder'"
     if parent_id:
-        query += f" and '{parent_id}' in parents"
+        safe_parent_id = parent_id.replace("\\", "\\\\").replace("'", "\\'")
+        query += f" and '{safe_parent_id}' in parents"
 
     results = service.files().list(q=query, spaces='drive', fields='files(id, name)').execute()
     items = results.get('files', [])
