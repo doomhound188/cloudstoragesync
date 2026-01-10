@@ -1,0 +1,25 @@
+2026-01-10 01:01:06,132 - INFO - Scanning folder: Root
+2026-01-10 01:01:06,133 - INFO - Transferring file: file_0.txt -> file_0.txt
+2026-01-10 01:01:06,133 - INFO - Transferring file: file_1.txt -> file_1.txt
+2026-01-10 01:01:06,134 - INFO - Transferring file: file_2.txt -> file_2.txt
+2026-01-10 01:01:06,134 - INFO - Transferring file: file_3.txt -> file_3.txt
+2026-01-10 01:01:06,134 - INFO - Transferring file: file_4.txt -> file_4.txt
+2026-01-10 01:01:06,134 - INFO - Transferring file: file_5.txt -> file_5.txt
+2026-01-10 01:01:06,134 - INFO - Transferring file: file_6.txt -> file_6.txt
+2026-01-10 01:01:06,135 - INFO - Transferring file: file_7.txt -> file_7.txt
+2026-01-10 01:01:06,135 - INFO - Transferring file: file_8.txt -> file_8.txt
+2026-01-10 01:01:06,135 - INFO - Transferring file: file_9.txt -> file_9.txt
+2026-01-10 01:02:20,572 - INFO - Scanning folder: Root
+2026-01-10 01:02:20,573 - INFO - Transferring file: file_0.txt -> file_0.txt
+2026-01-10 01:02:20,574 - INFO - Transferring file: file_1.txt -> file_1.txt
+2026-01-10 01:02:20,574 - INFO - Transferring file: file_2.txt -> file_2.txt
+2026-01-10 01:02:20,574 - INFO - Transferring file: file_3.txt -> file_3.txt
+2026-01-10 01:02:20,574 - INFO - Transferring file: file_4.txt -> file_4.txt
+2026-01-10 01:02:20,574 - INFO - Transferring file: file_5.txt -> file_5.txt
+2026-01-10 01:02:20,575 - INFO - Transferring file: file_6.txt -> file_6.txt
+2026-01-10 01:02:20,575 - INFO - Transferring file: file_7.txt -> file_7.txt
+2026-01-10 01:02:20,575 - INFO - Transferring file: file_8.txt -> file_8.txt
+2026-01-10 01:02:20,575 - INFO - Transferring file: file_9.txt -> file_9.txt
+2026-01-10 01:02:20,577 - INFO - Scanning folder: Root
+2026-01-10 01:02:20,577 - INFO - File conflict for 'existing.txt'. Uploading as 'existing_20260110_010220.txt'
+2026-01-10 01:02:20,577 - INFO - Transferring file: existing.txt -> existing_20260110_010220.txt

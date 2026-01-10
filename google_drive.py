@@ -216,3 +216,40 @@ def upload_file(service, name, parent_id, data_stream, file_size, mimetype='appl
     file = service.files().create(body=file_metadata, media_body=media, fields='id').execute()
     logger.info(f"Uploaded file '{name}' (ID: {file.get('id')})")
     return file.get('id')
+
+
+def list_folder_contents(service, parent_id):
+    """
+    Lists all files and folders in a specific Google Drive folder.
+    Returns a dictionary mapping names to metadata (id, name, mimeType).
+    """
+    files_map = {}
+    page_token = None
+
+    # Escape backslashes and single quotes for safety
+    safe_parent_id = parent_id.replace("\\", "\\\\").replace("'", "\\'")
+
+    # We want all children, not trashed
+    query = f"'{safe_parent_id}' in parents and trashed=false"
+
+    while True:
+        try:
+            results = service.files().list(
+                q=query,
+                spaces='drive',
+                fields='nextPageToken, files(id, name, mimeType)',
+                pageToken=page_token,
+                pageSize=1000  # Maximize page size to reduce calls
+            ).execute()
+        except Exception as e:
+            logger.error(f"Error listing folder contents: {e}")
+            raise
+
+        for file in results.get('files', []):
+            files_map[file['name']] = file
+
+        page_token = results.get('nextPageToken')
+        if not page_token:
+            break
+
+    return files_map
