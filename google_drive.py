@@ -1,12 +1,13 @@
 import os
-import pickle
+import json
 import logging
+from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload
 
-# If modifying these scopes, delete the file token_google.pickle.
+# If modifying these scopes, delete the file token_google.json.
 SCOPES = ['https://www.googleapis.com/auth/drive']
 
 logger = logging.getLogger(__name__)
@@ -15,18 +16,27 @@ def authenticate(config):
     """Shows basic usage of the Drive v3 API.
     """
     creds = None
-    # The file token_google.pickle stores the user's access and refresh tokens, and is
+    # The file token_google.json stores the user's access and refresh tokens, and is
     # created automatically when the authorization flow completes for the first
     # time.
-    if os.path.exists('token_google.pickle'):
-        with open('token_google.pickle', 'rb') as token:
-            creds = pickle.load(token)
+    if os.path.exists('token_google.json'):
+        try:
+            with open('token_google.json', 'r') as token:
+                creds = Credentials.from_authorized_user_info(json.load(token), SCOPES)
+        except Exception as e:
+            logger.error(f"Error loading token_google.json: {e}")
+            creds = None
 
     # If there are no (valid) credentials available, let the user log in.
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
-        else:
+            try:
+                creds.refresh(Request())
+            except Exception as e:
+                logger.error(f"Error refreshing token: {e}")
+                creds = None
+
+        if not creds:
             if 'google' not in config:
                 raise ValueError("Google configuration missing in config.json")
 
@@ -46,8 +56,8 @@ def authenticate(config):
             creds = flow.run_local_server(port=0)
 
         # Save the credentials for the next run
-        with open('token_google.pickle', 'wb') as token:
-            pickle.dump(creds, token)
+        with open('token_google.json', 'w') as token:
+            token.write(creds.to_json())
 
     service = build('drive', 'v3', credentials=creds)
     return service
