@@ -2,6 +2,7 @@
 config.json
 token_onedrive.bin
 token_google.pickle
+token_google.json
 .env
 
 # Logs
