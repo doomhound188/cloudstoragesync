@@ -62,6 +62,23 @@ def authenticate(config):
     service = build('drive', 'v3', credentials=creds)
     return service
 
+def create_folder(service, name, parent_id=None):
+    """
+    Creates a folder with the given name and parent.
+    Does NOT check if it already exists. Use this when you are sure it doesn't exist.
+    """
+    file_metadata = {
+        'name': name,
+        'mimeType': 'application/vnd.google-apps.folder'
+    }
+    if parent_id:
+        file_metadata['parents'] = [parent_id]
+
+    file = service.files().create(body=file_metadata, fields='id').execute()
+    logger.info(f"Created new folder '{name}' (ID: {file.get('id')})")
+    return file.get('id')
+
+
 def create_folder_if_not_exists(service, name, parent_id=None):
     """
     Checks if a folder exists with the given name and parent.
@@ -83,17 +100,7 @@ def create_folder_if_not_exists(service, name, parent_id=None):
         logger.info(f"Found existing folder '{name}' (ID: {items[0]['id']})")
         return items[0]['id']
     else:
-        # Create folder
-        file_metadata = {
-            'name': name,
-            'mimeType': 'application/vnd.google-apps.folder'
-        }
-        if parent_id:
-            file_metadata['parents'] = [parent_id]
-
-        file = service.files().create(body=file_metadata, fields='id').execute()
-        logger.info(f"Created new folder '{name}' (ID: {file.get('id')})")
-        return file.get('id')
+        return create_folder(service, name, parent_id)
 
 def file_exists(service, name, parent_id=None):
     """
