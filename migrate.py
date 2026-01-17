@@ -73,9 +73,9 @@ def sync_folder(od_client, gd_service, od_folder_id, gd_parent_id, path_prefix="
                     logger.info(f"Found existing folder '{item_name}' (ID: {gd_folder_id})")
                 else:
                     # Not in cache (or name conflict with file), create it
-                    # Note: create_folder_if_not_exists performs a check, which is redundant if we trust our cache
-                    # but safest to keep for edge cases or just rely on it handling the creation.
-                    gd_folder_id = google_drive.create_folder_if_not_exists(gd_service, item_name, gd_parent_id)
+                    # Note: create_folder_if_not_exists performs a check, which is redundant if we trust our cache.
+                    # Optimization: Use create_folder directly to avoid the redundant API call.
+                    gd_folder_id = google_drive.create_folder(gd_service, item_name, gd_parent_id)
 
                 # Recurse
                 sync_folder(od_client, gd_service, item_id, gd_folder_id, current_path)
