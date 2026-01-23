@@ -10,6 +10,13 @@ SCOPES = ['Files.Read']  # We only need read access to migrate
 
 logger = logging.getLogger(__name__)
 
+def save_token_cache(filepath, cache):
+    if cache.has_state_changed:
+        fd = os.open(filepath, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        with os.fdopen(fd, 'w') as f:
+            f.write(cache.serialize())
+        os.chmod(filepath, 0o600)
+
 class OneDriveClient:
     def __init__(self, config):
         self.client_id = config['microsoft']['client_id']
@@ -25,7 +32,7 @@ class OneDriveClient:
             with open(self.token_cache_file, "r") as f:
                 cache.deserialize(f.read())
 
-        atexit.register(lambda: open(self.token_cache_file, "w").write(cache.serialize()) if cache.has_state_changed else None)
+        atexit.register(save_token_cache, self.token_cache_file, cache)
 
         if self.client_secret:
              return msal.ConfidentialClientApplication(
