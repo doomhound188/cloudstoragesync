@@ -2,7 +2,6 @@ import os
 import json
 import logging
 import datetime
-from pathlib import Path
 
 # Import our modules
 import google_drive

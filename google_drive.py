@@ -12,6 +12,13 @@ SCOPES = ['https://www.googleapis.com/auth/drive']
 
 logger = logging.getLogger(__name__)
 
+def save_credentials(creds, filepath):
+    """Securely saves credentials to a file with 600 permissions."""
+    fd = os.open(filepath, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, 'w') as token:
+        token.write(creds.to_json())
+    os.chmod(filepath, 0o600)
+
 def authenticate(config):
     """Shows basic usage of the Drive v3 API.
     """
@@ -56,8 +63,7 @@ def authenticate(config):
             creds = flow.run_local_server(port=0)
 
         # Save the credentials for the next run
-        with open('token_google.json', 'w') as token:
-            token.write(creds.to_json())
+        save_credentials(creds, 'token_google.json')
 
     service = build('drive', 'v3', credentials=creds)
     return service

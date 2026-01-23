@@ -31,7 +31,7 @@ class TestAuth(unittest.TestCase):
         config = {'google': {'client_id': 'id', 'client_secret': 'secret'}}
 
         # Run authenticate
-        service = google_drive.authenticate(config)
+        _ = google_drive.authenticate(config)
 
         # Verify
         MockCredentials.from_authorized_user_info.assert_called_with(dummy_token, google_drive.SCOPES)
@@ -56,7 +56,7 @@ class TestAuth(unittest.TestCase):
         config = {'google': {'client_id': 'id', 'client_secret': 'secret'}}
 
         # Run authenticate
-        service = google_drive.authenticate(config)
+        _ = google_drive.authenticate(config)
 
         # Verify
         self.assertTrue(os.path.exists('token_google.json'))
