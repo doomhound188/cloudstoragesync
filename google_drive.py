@@ -12,8 +12,9 @@ SCOPES = ['https://www.googleapis.com/auth/drive']
 
 logger = logging.getLogger(__name__)
 
-def authenticate(config):
-    """Shows basic usage of the Drive v3 API.
+def get_credentials(config):
+    """
+    Retrieves or generates Google Drive credentials.
     """
     creds = None
     # The file token_google.json stores the user's access and refresh tokens, and is
@@ -59,6 +60,12 @@ def authenticate(config):
         with open('token_google.json', 'w') as token:
             token.write(creds.to_json())
 
+    return creds
+
+def authenticate(config):
+    """Shows basic usage of the Drive v3 API.
+    """
+    creds = get_credentials(config)
     service = build('drive', 'v3', credentials=creds)
     return service
 
