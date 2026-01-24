@@ -2,11 +2,15 @@ import os
 import json
 import logging
 import datetime
-from pathlib import Path
+import concurrent.futures
+import threading
 
 # Import our modules
 import google_drive
 from onedrive import OneDriveClient
+
+# Global thread-local storage for thread-safe Google Drive service access
+thread_local_data = threading.local()
 
 # Configure logging
 logging.basicConfig(
@@ -37,7 +41,55 @@ def get_timestamped_name(filename):
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     return f"{name}_{timestamp}{ext}"
 
-def sync_folder(od_client, gd_service, od_folder_id, gd_parent_id, path_prefix=""):
+def get_thread_safe_service(creds):
+    """
+    Returns a thread-local Google Drive service instance.
+    """
+    if not hasattr(thread_local_data, 'service'):
+        # Re-build service for this thread to ensure thread safety
+        thread_local_data.service = google_drive.build('drive', 'v3', credentials=creds)
+    return thread_local_data.service
+
+def process_file_upload(od_client, creds, item, gd_parent_id, current_path, gd_folder_contents):
+    """
+    Handles the upload of a single file in a thread-safe manner.
+    """
+    try:
+        # Use thread-local service
+        gd_service = get_thread_safe_service(creds)
+
+        item_name = item.get('name')
+        item_id = item.get('id')
+
+        # Check cache instead of making API call
+        existing_file = gd_folder_contents.get(item_name)
+        existing_file_id = None
+
+        if existing_file and existing_file['mimeType'] != 'application/vnd.google-apps.folder':
+            existing_file_id = existing_file['id']
+
+        target_name = item_name
+        if existing_file_id:
+            # Conflict: Rename the NEW file (the one coming from OneDrive)
+            target_name = get_timestamped_name(item_name)
+            logger.info(f"File conflict for '{item_name}'. Uploading as '{target_name}'")
+
+        logger.info(f"Transferring file: {current_path} -> {target_name}")
+
+        # Get file metadata
+        file_size = item.get('size', 0)
+        file_mime = item.get('file', {}).get('mimeType', 'application/octet-stream')
+
+        # Get stream from OneDrive
+        file_stream = od_client.get_file_stream(item_id)
+
+        # Upload to Google Drive
+        google_drive.upload_file(gd_service, target_name, gd_parent_id, file_stream, file_size, file_mime)
+
+    except Exception as e:
+        logger.error(f"Error transferring file {current_path}: {e}")
+
+def sync_folder(od_client, gd_service, od_folder_id, gd_parent_id, path_prefix="", executor=None, futures=None, creds=None):
     """
     Recursively syncs a OneDrive folder to a Google Drive folder.
     """
@@ -78,40 +130,26 @@ def sync_folder(od_client, gd_service, od_folder_id, gd_parent_id, path_prefix="
                     gd_folder_id = google_drive.create_folder(gd_service, item_name, gd_parent_id)
 
                 # Recurse
-                sync_folder(od_client, gd_service, item_id, gd_folder_id, current_path)
+                sync_folder(od_client, gd_service, item_id, gd_folder_id, current_path, executor, futures, creds)
             except Exception as e:
                 logger.error(f"Error processing folder {current_path}: {e}")
 
         elif item_type == 'file':
             # Handle File
-            try:
-                # Check cache instead of making API call
-                existing_file = gd_folder_contents.get(item_name)
-                existing_file_id = None
-
-                if existing_file and existing_file['mimeType'] != 'application/vnd.google-apps.folder':
-                    existing_file_id = existing_file['id']
-
-                target_name = item_name
-                if existing_file_id:
-                    # Conflict: Rename the NEW file (the one coming from OneDrive)
-                    target_name = get_timestamped_name(item_name)
-                    logger.info(f"File conflict for '{item_name}'. Uploading as '{target_name}'")
-
-                logger.info(f"Transferring file: {current_path} -> {target_name}")
-
-                # Get file metadata
-                file_size = item.get('size', 0)
-                file_mime = item.get('file', {}).get('mimeType', 'application/octet-stream')
-
-                # Get stream from OneDrive
-                file_stream = od_client.get_file_stream(item_id)
-
-                # Upload to Google Drive
-                google_drive.upload_file(gd_service, target_name, gd_parent_id, file_stream, file_size, file_mime)
-
-            except Exception as e:
-                logger.error(f"Error transferring file {current_path}: {e}")
+            if executor and creds:
+                # Submit to thread pool
+                future = executor.submit(process_file_upload, od_client, creds, item, gd_parent_id, current_path, gd_folder_contents)
+                if futures is not None:
+                    futures.append(future)
+            else:
+                # Fallback or initialization error
+                logger.warning("Executor or credentials missing, running synchronously.")
+                # We need a creds object here if we use process_file_upload, or pass gd_service if we used the old way.
+                # But since we refactored, process_file_upload expects creds.
+                if creds:
+                    process_file_upload(od_client, creds, item, gd_parent_id, current_path, gd_folder_contents)
+                else:
+                    logger.error(f"Cannot process file {current_path}: Credentials missing.")
 
 def main():
     logger.info("Starting Migration Tool...")
@@ -126,7 +164,10 @@ def main():
     # 2. Authenticate Google Drive
     logger.info("Authenticating with Google Drive...")
     try:
-        gd_service = google_drive.authenticate(config)
+        # Get credentials separately for thread safety
+        creds = google_drive.get_credentials(config)
+        # Create main thread service
+        gd_service = google_drive.build('drive', 'v3', credentials=creds)
     except Exception as e:
         logger.error(f"Google Drive Authentication failed: {e}")
         return
@@ -146,15 +187,20 @@ def main():
     # Get OneDrive Root ID (usually 'root')
     od_root_id = 'root'
 
-    # Get Google Drive Root ID (we can use None or 'root' depending on API, usually we just don't specify parent or use 'root' alias)
-    # However, to avoid cluttering the root, maybe we should create a 'OneDrive Backup' folder?
-    # The requirement was "Sync entire content". Usually implies mirroring root-to-root.
-    # I'll stick to root-to-root for now, or let the user decide.
-    # Let's assume root-to-root, so we check if top-level folders exist in 'root'.
-    # In Google Drive API, 'root' is an alias for the root folder ID.
+    # Get Google Drive Root ID
     gd_root_id = 'root'
 
-    sync_folder(od_client, gd_service, od_root_id, gd_root_id)
+    # Optimization: Use ThreadPoolExecutor for parallel file uploads
+    max_workers = 5
+    logger.info(f"Using {max_workers} worker threads for file uploads.")
+
+    futures = []
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+        sync_folder(od_client, gd_service, od_root_id, gd_root_id, executor=executor, futures=futures, creds=creds)
+
+        # Wait for all uploads to complete
+        logger.info("Scanning complete. Waiting for file uploads to finish...")
+        concurrent.futures.wait(futures)
 
     logger.info("Migration completed.")
 

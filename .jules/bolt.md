@@ -7,3 +7,7 @@
 ## 2024-10-27 - Optimize Google Drive Folder Creation
 **Learning:** `google_drive.create_folder_if_not_exists` makes a redundant `files().list()` call even when the caller (migration script) already knows the folder doesn't exist via its local cache.
 **Action:** Implemented `create_folder` to skip the check and updated `migrate.py` to use it when the cache misses. This saves 1 API call per new folder.
+
+## 2026-01-24 - Parallelize Google Drive Uploads
+**Learning:** `google-api-python-client` service objects using the default `httplib2` transport are NOT thread-safe for concurrent requests because `httplib2.Http` is not thread-safe.
+**Action:** When parallelizing uploads, use `threading.local()` to store a separate `service` instance for each thread to ensure safety.
