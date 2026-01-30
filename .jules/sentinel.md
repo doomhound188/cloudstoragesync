@@ -12,3 +12,8 @@
 **Vulnerability:** The application used Python's `pickle` module to store and load Google Drive credentials (`token_google.pickle`). Pickle is unsafe and allows arbitrary code execution if the file is compromised.
 **Learning:** Legacy examples from library documentation often use `pickle`, which is now considered a security antipattern for persisting data.
 **Prevention:** Replaced `pickle` with JSON serialization using `Credentials.to_json()` and `Credentials.from_authorized_user_info()`. Added `token_google.json` to `.gitignore`.
+
+## 2026-01-30 - [HIGH] Insecure Token Cache Permissions
+**Vulnerability:** The application saved sensitive authentication tokens (`token_google.json`, `token_onedrive.bin`) with default file permissions (often `0o644`), allowing other users on the system to read them.
+**Learning:** Default `open(..., 'w')` behavior honors the system `umask`, which is typically permissive. For sensitive files, explicit permission management is required at creation time.
+**Prevention:** Use `os.open` with `os.O_CREAT | os.O_WRONLY | os.O_TRUNC` and `0o600` mode, then wrap the file descriptor with `os.fdopen`.
