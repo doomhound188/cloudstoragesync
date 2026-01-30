@@ -25,7 +25,7 @@ class OneDriveClient:
             with open(self.token_cache_file, "r") as f:
                 cache.deserialize(f.read())
 
-        atexit.register(lambda: open(self.token_cache_file, "w").write(cache.serialize()) if cache.has_state_changed else None)
+        atexit.register(self._save_token_cache, cache)
 
         if self.client_secret:
              return msal.ConfidentialClientApplication(
@@ -40,6 +40,13 @@ class OneDriveClient:
                 authority=self.authority,
                 token_cache=cache
             )
+
+    def _save_token_cache(self, cache):
+        if cache.has_state_changed:
+            # Securely create file with 600 permissions
+            fd = os.open(self.token_cache_file, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+            with os.fdopen(fd, 'w') as f:
+                f.write(cache.serialize())
 
     def authenticate(self):
         accounts = self.app.get_accounts()
