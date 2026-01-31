@@ -78,7 +78,9 @@ class OneDriveClient:
         Generator that yields items (files and folders) from a specific folder.
         Handles pagination.
         """
-        url = f'{GRAPH_API_ENDPOINT}/me/drive/items/{item_id}/children'
+        # Optimization: Increase page size ($top) to reduce number of API calls.
+        # We avoid $select to ensure we don't accidentally miss fields needed by consumers.
+        url = f'{GRAPH_API_ENDPOINT}/me/drive/items/{item_id}/children?$top=1000'
 
         while url:
             response = requests.get(url, headers=self.get_headers())
