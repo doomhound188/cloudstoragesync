@@ -19,13 +19,20 @@ class OneDriveClient:
         self.app = self._build_app()
         self.access_token = None
 
+    def _save_cache(self, cache):
+        if cache.has_state_changed:
+            # Securely save token cache with 600 permissions (read/write only by owner)
+            fd = os.open(self.token_cache_file, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+            with os.fdopen(fd, "w") as f:
+                f.write(cache.serialize())
+
     def _build_app(self):
         cache = msal.SerializableTokenCache()
         if os.path.exists(self.token_cache_file):
             with open(self.token_cache_file, "r") as f:
                 cache.deserialize(f.read())
 
-        atexit.register(lambda: open(self.token_cache_file, "w").write(cache.serialize()) if cache.has_state_changed else None)
+        atexit.register(self._save_cache, cache)
 
         if self.client_secret:
              return msal.ConfidentialClientApplication(

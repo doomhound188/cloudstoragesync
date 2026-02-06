@@ -57,7 +57,8 @@ def get_credentials(config):
             creds = flow.run_local_server(port=0)
 
         # Save the credentials for the next run
-        with open('token_google.json', 'w') as token:
+        fd = os.open('token_google.json', os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        with os.fdopen(fd, 'w') as token:
             token.write(creds.to_json())
 
     return creds
