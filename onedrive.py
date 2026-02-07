@@ -18,6 +18,8 @@ class OneDriveClient:
         self.token_cache_file = "token_onedrive.bin"
         self.app = self._build_app()
         self.access_token = None
+        # Optimization: Use a session for connection pooling
+        self.session = requests.Session()
 
     def _build_app(self):
         cache = msal.SerializableTokenCache()
@@ -90,7 +92,8 @@ class OneDriveClient:
         url = f'{GRAPH_API_ENDPOINT}/me/drive/items/{item_id}/children?$top=1000'
 
         while url:
-            response = requests.get(url, headers=self.get_headers())
+            # Use session for connection pooling
+            response = self.session.get(url, headers=self.get_headers())
             if response.status_code != 200:
                 logger.error(f"Error fetching items: {response.text}")
                 raise Exception(f"Error fetching OneDrive items for {item_id}")
@@ -109,7 +112,8 @@ class OneDriveClient:
         """
         url = f'{GRAPH_API_ENDPOINT}/me/drive/items/{file_id}/content'
         # stream=True is crucial here to not load the whole file into memory
-        response = requests.get(url, headers=self.get_headers(), stream=True)
+        # Use session for connection pooling
+        response = self.session.get(url, headers=self.get_headers(), stream=True)
         if response.status_code != 200:
             logger.error(f"Error downloading file {file_id}: {response.text}")
             raise Exception(f"Error downloading file {file_id}")

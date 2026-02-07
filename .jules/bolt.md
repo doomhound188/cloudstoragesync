@@ -15,3 +15,7 @@
 ## 2026-01-31 - Safe API Optimization
 **Learning:** Adding `$select` to restrict API fields is a high-risk optimization if all downstream consumers are not fully audited, as it can cause unexpected `KeyError`s.
 **Action:** For general-purpose optimizations, prioritize `$top` (page size) increases over `$select` (field restriction) unless payload size is a critical bottleneck and consumers are strictly controlled.
+
+## 2026-02-07 - OneDrive Connection Pooling
+**Learning:** `requests.get` creates a new TCP/SSL connection for every call. In a migration tool iterating over thousands of pages/files, the handshake overhead is significant (50-100ms per call).
+**Action:** Use `requests.Session()` to persist connections. This is especially effective for pagination loops (`get_drive_items`) where multiple sequential requests go to the same host (`graph.microsoft.com`).
