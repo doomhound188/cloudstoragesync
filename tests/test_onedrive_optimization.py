@@ -11,21 +11,25 @@ class TestOneDriveOptimization(unittest.TestCase):
 
     @patch('onedrive.atexit')
     @patch('onedrive.msal')
-    @patch('onedrive.requests')
-    def test_get_drive_items_optimization(self, mock_requests, mock_msal, mock_atexit):
+    @patch('onedrive.requests.Session')
+    def test_get_drive_items_optimization(self, mock_session_cls, mock_msal, mock_atexit):
         # Setup Mocks
         mock_app = MagicMock()
         mock_msal.PublicClientApplication.return_value = mock_app
         mock_app.acquire_token_silent.return_value = {'access_token': 'fake_token'}
 
-        # Mock requests.get response
+        # Setup Session Mock
+        mock_session_instance = MagicMock()
+        mock_session_cls.return_value = mock_session_instance
+
+        # Mock session.get response
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.json.return_value = {
             'value': [],
             '@odata.nextLink': None
         }
-        mock_requests.get.return_value = mock_response
+        mock_session_instance.get.return_value = mock_response
 
         # Instantiate Client
         config = {'microsoft': {'client_id': 'fake_id'}}
@@ -36,8 +40,8 @@ class TestOneDriveOptimization(unittest.TestCase):
         # Consume the generator
         items = list(client.get_drive_items('root'))
 
-        # Verify requests.get was called with optimized URL
-        args, kwargs = mock_requests.get.call_args
+        # Verify session.get was called with optimized URL
+        args, kwargs = mock_session_instance.get.call_args
         url = args[0]
 
         self.assertIn('$top=1000', url)
