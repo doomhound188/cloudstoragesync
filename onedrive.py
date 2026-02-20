@@ -7,6 +7,7 @@ import msal
 # MS Graph API endpoints
 GRAPH_API_ENDPOINT = 'https://graph.microsoft.com/v1.0'
 SCOPES = ['Files.Read']  # We only need read access to migrate
+TIMEOUT = 60  # Timeout for API requests in seconds
 
 logger = logging.getLogger(__name__)
 
@@ -90,7 +91,7 @@ class OneDriveClient:
         url = f'{GRAPH_API_ENDPOINT}/me/drive/items/{item_id}/children?$top=1000'
 
         while url:
-            response = requests.get(url, headers=self.get_headers())
+            response = requests.get(url, headers=self.get_headers(), timeout=TIMEOUT)
             if response.status_code != 200:
                 logger.error(f"Error fetching items: {response.text}")
                 raise Exception(f"Error fetching OneDrive items for {item_id}")
@@ -109,7 +110,7 @@ class OneDriveClient:
         """
         url = f'{GRAPH_API_ENDPOINT}/me/drive/items/{file_id}/content'
         # stream=True is crucial here to not load the whole file into memory
-        response = requests.get(url, headers=self.get_headers(), stream=True)
+        response = requests.get(url, headers=self.get_headers(), stream=True, timeout=TIMEOUT)
         if response.status_code != 200:
             logger.error(f"Error downloading file {file_id}: {response.text}")
             raise Exception(f"Error downloading file {file_id}")
