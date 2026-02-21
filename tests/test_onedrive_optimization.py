@@ -18,14 +18,18 @@ class TestOneDriveOptimization(unittest.TestCase):
         mock_msal.PublicClientApplication.return_value = mock_app
         mock_app.acquire_token_silent.return_value = {'access_token': 'fake_token'}
 
-        # Mock requests.get response
+        # Mock Session
+        mock_session = MagicMock()
+        mock_requests.Session.return_value = mock_session
+
+        # Mock session.get response
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.json.return_value = {
             'value': [],
             '@odata.nextLink': None
         }
-        mock_requests.get.return_value = mock_response
+        mock_session.get.return_value = mock_response
 
         # Instantiate Client
         config = {'microsoft': {'client_id': 'fake_id'}}
@@ -34,16 +38,23 @@ class TestOneDriveOptimization(unittest.TestCase):
 
         # Call get_drive_items
         # Consume the generator
-        items = list(client.get_drive_items('root'))
+        _ = list(client.get_drive_items('root'))
 
-        # Verify requests.get was called with optimized URL
-        args, kwargs = mock_requests.get.call_args
-        url = args[0]
+        # Verify session.get was called with optimized URL
+        args, kwargs = mock_session.get.call_args
+        if args:
+            url = args[0]
+        else:
+            # Maybe called with keyword argument?
+            url = kwargs.get('url')
+
+        timeout = kwargs.get('timeout')
 
         self.assertIn('$top=1000', url)
         # We removed $select to ensure safety against missing fields in future usages
         self.assertNotIn('$select=', url)
-        print(f"Verified URL: {url}")
+        self.assertEqual(timeout, 60)
+        print(f"Verified URL: {url} with timeout: {timeout}")
 
 if __name__ == '__main__':
     unittest.main()
