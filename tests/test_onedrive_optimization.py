@@ -25,19 +25,21 @@ class TestOneDriveOptimization(unittest.TestCase):
             'value': [],
             '@odata.nextLink': None
         }
-        mock_requests.get.return_value = mock_response
 
         # Instantiate Client
         config = {'microsoft': {'client_id': 'fake_id'}}
         client = onedrive.OneDriveClient(config)
         client.authenticate()
 
+        # Mock session.get instead of requests.get
+        client.session.get = MagicMock(return_value=mock_response)
+
         # Call get_drive_items
         # Consume the generator
-        items = list(client.get_drive_items('root'))
+        list(client.get_drive_items('root'))
 
-        # Verify requests.get was called with optimized URL
-        args, kwargs = mock_requests.get.call_args
+        # Verify session.get was called with optimized URL
+        args, kwargs = client.session.get.call_args
         url = args[0]
 
         self.assertIn('$top=1000', url)
