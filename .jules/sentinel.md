@@ -17,3 +17,8 @@
 **Vulnerability:** The application saved sensitive authentication tokens (`token_google.json`, `token_onedrive.bin`) with default file permissions (often `0o644`), allowing other users on the system to read them.
 **Learning:** Default `open(..., 'w')` behavior honors the system `umask`, which is typically permissive. For sensitive files, explicit permission management is required at creation time.
 **Prevention:** Use `os.open` with `os.O_CREAT | os.O_WRONLY | os.O_TRUNC` and `0o600` mode, then wrap the file descriptor with `os.fdopen`.
+
+## 2026-03-06 - [MEDIUM] Missing Timeouts on External Requests
+**Vulnerability:** External HTTP requests made using `requests.Session().get()` in `onedrive.py` did not specify a timeout.
+**Learning:** Without a configured timeout, external network calls can hang indefinitely if the remote server fails to respond or the network connection drops silently. This can lead to unhandled thread blocking and resource exhaustion (Denial of Service).
+**Prevention:** Always explicitly set a `timeout` parameter on all network operations. Added a global `TIMEOUT = 60` constant in `onedrive.py` and passed `timeout=TIMEOUT` to all `session.get` calls.

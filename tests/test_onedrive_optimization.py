@@ -38,7 +38,7 @@ class TestOneDriveOptimization(unittest.TestCase):
 
         # Call get_drive_items
         # Consume the generator
-        items = list(client.get_drive_items('root'))
+        list(client.get_drive_items('root'))
 
         # Verify session.get was called with optimized URL
         # We need to ensure we are checking the session object used by the client
