@@ -1,6 +1,5 @@
 import unittest
 import os
-import atexit
 from unittest.mock import patch, MagicMock
 import google_drive
 import onedrive

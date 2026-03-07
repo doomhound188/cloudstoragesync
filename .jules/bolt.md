@@ -19,3 +19,7 @@
 ## 2026-02-07 - OneDrive Connection Pooling
 **Learning:** `requests.get` creates a new TCP/SSL connection for every call. In a migration tool iterating over thousands of pages/files, the handshake overhead is significant (50-100ms per call).
 **Action:** Use `requests.Session()` to persist connections. This is especially effective for pagination loops (`get_drive_items`) where multiple sequential requests go to the same host (`graph.microsoft.com`).
+
+## 2026-03-07 - Skip Empty Folder Contents Listing
+**Learning:** `google_drive.list_folder_contents` is called immediately when scanning a Google Drive folder. However, if the folder was just created (e.g. `google_drive.create_folder`), it is fundamentally empty. Calling `list_folder_contents` on newly created folders creates unnecessary network requests.
+**Action:** When creating directories recursively, keep track of newly created ones by passing an `is_new_folder` flag. Using this flag to skip API calls to fetch contents of empty directories eliminates network overhead per new folder.
