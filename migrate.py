@@ -89,7 +89,7 @@ def process_file_upload(od_client, creds, item, gd_parent_id, current_path, gd_f
     except Exception as e:
         logger.error(f"Error transferring file {current_path}: {e}")
 
-def sync_folder(od_client, gd_service, od_folder_id, gd_parent_id, path_prefix="", executor=None, futures=None, creds=None):
+def sync_folder(od_client, gd_service, od_folder_id, gd_parent_id, path_prefix="", executor=None, futures=None, creds=None, is_new_folder=False):
     """
     Recursively syncs a OneDrive folder to a Google Drive folder.
     """
@@ -97,7 +97,11 @@ def sync_folder(od_client, gd_service, od_folder_id, gd_parent_id, path_prefix="
 
     # Optimization: Pre-fetch Google Drive folder contents to avoid N API calls
     try:
-        gd_folder_contents = google_drive.list_folder_contents(gd_service, gd_parent_id)
+        if is_new_folder:
+            # A newly created folder is empty, no need to make an API call
+            gd_folder_contents = {}
+        else:
+            gd_folder_contents = google_drive.list_folder_contents(gd_service, gd_parent_id)
     except Exception as e:
         logger.error(f"Failed to list Google Drive folder {gd_parent_id}: {e}")
         return
@@ -119,6 +123,7 @@ def sync_folder(od_client, gd_service, od_folder_id, gd_parent_id, path_prefix="
             # Handle Folder
             try:
                 # Check cache first
+                newly_created = False
                 existing_folder = gd_folder_contents.get(item_name)
                 if existing_folder and existing_folder['mimeType'] == 'application/vnd.google-apps.folder':
                     gd_folder_id = existing_folder['id']
@@ -128,9 +133,10 @@ def sync_folder(od_client, gd_service, od_folder_id, gd_parent_id, path_prefix="
                     # Note: create_folder_if_not_exists performs a check, which is redundant if we trust our cache.
                     # Optimization: Use create_folder directly to avoid the redundant API call.
                     gd_folder_id = google_drive.create_folder(gd_service, item_name, gd_parent_id)
+                    newly_created = True
 
                 # Recurse
-                sync_folder(od_client, gd_service, item_id, gd_folder_id, current_path, executor, futures, creds)
+                sync_folder(od_client, gd_service, item_id, gd_folder_id, current_path, executor, futures, creds, newly_created)
             except Exception as e:
                 logger.error(f"Error processing folder {current_path}: {e}")
 
