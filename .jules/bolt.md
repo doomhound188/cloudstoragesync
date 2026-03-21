@@ -19,3 +19,7 @@
 ## 2026-02-07 - OneDrive Connection Pooling
 **Learning:** `requests.get` creates a new TCP/SSL connection for every call. In a migration tool iterating over thousands of pages/files, the handshake overhead is significant (50-100ms per call).
 **Action:** Use `requests.Session()` to persist connections. This is especially effective for pagination loops (`get_drive_items`) where multiple sequential requests go to the same host (`graph.microsoft.com`).
+
+## 2026-03-21 - Eliminate Redundant API Calls for New Folders
+**Learning:** During recursive folder syncs, newly created folders are guaranteed to be empty. Calling `list_folder_contents` on them adds a redundant API call that contributes to migration overhead and rate-limit exhaustion.
+**Action:** Propagate an `is_new_folder` flag in recursive calls. If True, bypass the `list_folder_contents` call and initialize the local cache as an empty dictionary.
