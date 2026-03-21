@@ -104,5 +104,28 @@ class TestMigrateSync(unittest.TestCase):
         func = call_args[0][0]
         self.assertEqual(func.__name__, 'process_file_upload')
 
+    @patch('migrate.google_drive')
+    def test_sync_folder_is_new_folder_optimization(self, mock_gd):
+        MagicMock()
+        mock_od_client = MagicMock()
+        mock_gd_service = MagicMock()
+        MagicMock()
+
+        # Simulate empty OneDrive folder so no files/folders to process
+        mock_od_client.get_drive_items.return_value = []
+
+        # Call with is_new_folder=True
+        migrate.sync_folder(mock_od_client, mock_gd_service, 'od_root', 'gd_root', is_new_folder=True)
+
+        # Verify that list_folder_contents was NOT called
+        mock_gd.list_folder_contents.assert_not_called()
+
+        # Call with is_new_folder=False
+        migrate.sync_folder(mock_od_client, mock_gd_service, 'od_root', 'gd_root', is_new_folder=False)
+
+        # Verify that list_folder_contents WAS called
+        mock_gd.list_folder_contents.assert_called_once_with(mock_gd_service, 'gd_root')
+
+
 if __name__ == '__main__':
     unittest.main()
