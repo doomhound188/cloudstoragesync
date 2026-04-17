@@ -38,7 +38,7 @@ class TestOneDriveOptimization(unittest.TestCase):
 
         # Call get_drive_items
         # Consume the generator
-        items = list(client.get_drive_items('root'))
+        list(client.get_drive_items('root'))
 
         # Verify session.get was called with optimized URL
         # We need to ensure we are checking the session object used by the client
@@ -51,6 +51,9 @@ class TestOneDriveOptimization(unittest.TestCase):
         self.assertIn('$top=1000', url)
         # We removed $select to ensure safety against missing fields in future usages
         self.assertNotIn('$select=', url)
+
+        # Verify timeout is passed to prevent hanging
+        self.assertEqual(kwargs.get('timeout'), onedrive.TIMEOUT)
         print(f"Verified URL: {url}")
 
 if __name__ == '__main__':
